@@ -3,6 +3,7 @@ import logging
 import urllib
 import pandas as pd
 import csv
+import traceback
 import re
 class firstSpider(scrapy.Spider):
     name = 'companies'
@@ -16,19 +17,25 @@ class firstSpider(scrapy.Spider):
         items = response.css('div[class=div-col] a::attr(href)').getall()
         for i, item in enumerate(items[:]):
             if "https://en.wikipedia.org" not in item:
-                item="https://en.wikipedia.org"+item
+                item = "https://en.wikipedia.org" + item
                 link = response.urljoin(item)
-
-            yield scrapy.Request(url=link, callback=self.parse_businesses)
+            print(i)
+            self.i = i
+            try:
+                yield scrapy.Request(url=link, callback=self.parse_businesses,
+                                     meta={"max_retry_times": 2, "download_timeout": 20},
+                                     errback=(lambda e: print("errback:", e)))
+            except Exception as e:
+                print(traceback.format_exc())
 
 
     def parse_businesses(self,response):
         try:
             page_link = response.css('span[class=url] a::attr(href)').get()
             link = response.urljoin(page_link)
-            meta = {"link": link}
-            print("parse businesses", link, firstSpider.counter)
-            yield scrapy.Request(url=link, callback=self.parse_business,meta=meta)
+            meta = {"link": link, "max_retry_times": 1, "download_timeout": 20}
+            yield scrapy.Request(url=link, callback=self.parse_business, meta=meta,
+                                 errback=(lambda e: print("errback:", e)))
         except Exception as e:
             print(e)
 
@@ -43,7 +50,8 @@ class firstSpider(scrapy.Spider):
         twitter_link=""
         instagram_link=""
         contact_link=""
-
+        emails =""
+        phone_number=""
         link=response.meta.get("link").replace("http://","https://")
         firstSpider.counter+=1
         #print("parse business link: ",link)
@@ -59,13 +67,21 @@ class firstSpider(scrapy.Spider):
                     twitter_link=href
                 if "contact" in href:
                     contact_link=href
-
+                    yield scrapy.Request(url=contact_link, callback=self.parse_website)
 
             except Exception as e:
-                print(e)
-        # self.add_business(self.big_chunky_list,
-        #                   urllib.parse.unquote(link, encoding='utf-8', errors='replace'), facebook_link, instagram_link,
-        #                   twitter_link, contact_link)
+                print(traceback.format_exc())
+
+
+        #
+
+            emails = re.findall(r'[\w\.-]+@[\w\.-]+', response.text)
+            phone_number = re.findall(
+                r'((?:\+\d{2}[-\.\s]??|\d{4}[-\.\s]??)?(?:\d{3}[-\.\s]??\d{3}[-\.\s]??\d{4}|\(\d{3}\)\s*\d{3}[-\.\s]??\d{4}|\d{3}[-\.\s]??\d{4}))',
+                response.text)
+        self.add_business(self.big_chunky_list,
+                          urllib.parse.unquote(link, encoding='utf-8', errors='replace'), facebook_link, instagram_link,
+                          twitter_link, contact_link,emails,phone_number)
         #print(self.big_chunky_list)
         try:
             #print("link ", link, "facebook",facebook_link," twitter ", twitter_link, " contact ", contact_link, "email")
@@ -88,10 +104,26 @@ class firstSpider(scrapy.Spider):
         phone_number = re.findall(
             r'((?:\+\d{2}[-\.\s]??|\d{4}[-\.\s]??)?(?:\d{3}[-\.\s]??\d{3}[-\.\s]??\d{4}|\(\d{3}\)\s*\d{3}[-\.\s]??\d{4}|\d{3}[-\.\s]??\d{4}))',
             response.text)
+
+        set_phone_number = set(phone_number)
+        phone_number = list(set_phone_number)
+
+        for item in phone_number:
+            try:
+                # print(len(str(item)))
+                if len(str(item)) != 11 or item[0] != "1":
+                    print(" phone number ", item, len(str(item)))
+                    phone_number.remove(item)
+            except:
+                print("no phone number")
+        item=[]
+        item.append(emails,phone_number)
+        return item
+
         #print("email",emails,"phone",phone_number)
-        self.add_business(self.big_chunky_list,
-                        urllib.parse.unquote(link, encoding='utf-8', errors='replace'), facebook_link, instagram_link,
-                          twitter_link, contact_link,emails,phone_number)
+        # self.add_business(self.big_chunky_list,
+        #                 urllib.parse.unquote(link, encoding='utf-8', errors='replace'), facebook_link, instagram_link,
+        #                   twitter_link, contact_link,emails,phone_number)
         # # try:
         #     print(" phone number ", phone_number)
         # except:
