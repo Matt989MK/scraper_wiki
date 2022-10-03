@@ -12,84 +12,151 @@ class firstSpider(scrapy.Spider):
     rules = (
         Rule(LinkExtractor(allow=r''), callback='parse_item', follow=True),
     )
+    list_vars=[]
+    boom = []
     def parse(self, response):
 
         hrefs_xpath = "//a/@href[contains(., 'facebook') or contains(.,'contact') or contains(.,'instagram') or contains(.,'twitter')]"
         #we are on the main website
         #Thats supposed to give us links for socials fb, ig, twitter and a contact page
         hrefs = response.xpath(hrefs_xpath).extract()
-        print("links are here",hrefs)
         link="link"
+        hrefs_set = set(hrefs)
+        hrefs=hrefs_set
+        #print("links are here",hrefs)
 
         for href in hrefs:#we are going through links on the page to find socials
             #['http://smithgill.com/contact', 'https://www.twitter.com/smithgillarch',
-            # 'https://www.facebook.com/smithgillarch', 'http://smithgill.com/contact',
-            # 'https://www.twitter.com/smithgillarch', 'https://www.facebook.com/smithgillarch']
+            # 'https://www.facebook.com/smithgillarch', 'https://www.twitter.com/smithgillarch'
             print("the link is ",href)
+            twitter_link=""
+            contact_link=""
+            facebook_link=""
             try:
                 if "twitter" in href:
                     twitter_link = href
-                    print("twitter link", twitter_link)
+                    #print("twitter link", twitter_link)
                     yield scrapy.Request(url=twitter_link, callback=self.parse_item,
-                                         meta={'link': link, 'twitter': twitter_link,
-                                               })
+                                         meta={'twitter': twitter_link})
                     test2 = response.meta['twitter_key']
+
                     print("twitter test", test2)
             except Exception as e:
                 print(e)
             try:
                 if "contact" in href:
                     contact_link = href
-                    print("contact link", contact_link)
-
+                    #print("contact link", contact_link)
                     yield scrapy.Request(url=contact_link, callback=self.parse_item,
-                                         meta={'link': link,
-                                               'contact': contact_link})
+                                         meta={'contact': contact_link})
                     test1 = response.meta['contact_key']
-                    print("contact test",test1)
 
+                    print("contact test",test1)
             except Exception as e:
                 print(e)
+            try:
+                if "facebook" in href:
+                    facebook_link = href
+                    # print("contact link", contact_link)
+                    yield scrapy.Request(url=facebook_link, callback=self.parse_item,
+                                         meta={'facebook': facebook_link})
+                    test3 = response.meta['facebook_key']
 
+                    print("facebook test", test3)
+            except Exception as e:
+                print(e)
+            #variables overwrite themselves thats the problem. Make a list in the beginning and append. If containts dont replace
+
+            print(firstSpider.boom)
 
 
         #yield scrapy.Request(url="http://smithgill.com/contact", callback=self.parse_item,meta={'link':link,'facebook': facebook_link,'contact':contact_link})
 
 
+    # def parse_item(self, response):
+    #     #link = response.meta['link']
+    #    # print("parse item link:",link)
+    #     try:
+    #         twitter_link = response.meta['twitter']
+    #         print("parse item twitter link: ",twitter_link)
+    #         if twitter_link:
+    #             print("twitter link is", twitter_link)
+    #             twitter_test = "twitter works"
+    #             yield scrapy.Request(url='http://smithgill.com/', callback=self.parse,
+    #                                  meta={'twitter_key': twitter_test})
+    #     except Exception as e:
+    #         print("problem with twitter",e)
+    #     try:
+    #         contact_link = response.meta['contact']
+    #         print("parse item contact link",contact_link)
+    #         if contact_link:
+    #             print("contact link is", contact_link)
+    #             contact_test = "contact works"
+    #             yield scrapy.Request(url='http://smithgill.com/', callback=self.parse,
+    #                                  meta={'contact_key': contact_test})
+    #     except Exception as e:
+    #         print("problem with contact", e)
+    #
+    #     #print("t1",link,"t2",facebook_link)
+    #     emails = re.findall(r'[\w\.-]+@[\w\.-]+', response.text)
+    #     phone_number = re.findall(r'((?:\+\d{2}[-\.\s]??|\d{4}[-\.\s]??)?(?:\d{3}[-\.\s]??\d{3}[-\.\s]??\d{4}|\(\d{3}\)\s*\d{3}[-\.\s]??\d{4}|\d{3}[-\.\s]??\d{4}))', response.text)
+    #     set_phone_number = set(phone_number)
+    #     phone_number=list(set_phone_number)
+
     def parse_item(self, response):
-        link = response.meta['link']
+        #link = response.meta['link']
+        # print("parse item link:",link)
+        test_var = "twitter Doesnt work"
+        test_var_contact ="contact Doesnt work"
+        test_var_facebook="facebook Doesnt work"
+
+
         try:
-            twitter_link = response.meta['twitter']
-            print("parse item twitter link: ",twitter_link)
-            if twitter_link:
-                print("twitter link is", twitter_link)
-                twitter_test = "twitter works"
-                yield scrapy.Request(url='http://smithgill.com/', callback=self.parse,
-                                     meta={'twitter_key': twitter_test})
-        except Exception as e:
-            print("problem with twitter",e)
+            tt=response.meta['twitter']
+            if tt:
+                #print("twitter key")
+                test_var=" twitter works"
+                firstSpider.boom.append(test_var)
+        except:
+            print("unlucky")
+
         try:
-            contact_link = response.meta['contact']
-            print("parse item contact link",contact_link)
-            if contact_link:
-                print("contact link is", contact_link)
-                contact_test = "contact works"
-                yield scrapy.Request(url='http://smithgill.com/', callback=self.parse,
-                                     meta={'contact_key': contact_test})
-        except Exception as e:
-            print("problem with contact", e)
+            tt2 = response.meta['contact']
+            if tt2:
+                #print("contact key")
+                emails = re.findall(r'[\w\.-]+@[\w\.-]+', response.text)
+                set_emails = set(emails)
+                emails=list(set_emails)
+                phone_number = re.findall(r'((?:\+\d{2}[-\.\s]??|\d{4}[-\.\s]??)?(?:\d{3}[-\.\s]??\d{3}[-\.\s]??\d{4}|\(\d{3}\)\s*\d{3}[-\.\s]??\d{4}|\d{3}[-\.\s]??\d{4}))', response.text)
+                set_phone_number = set(phone_number)
+                phone_number=list(set_phone_number)
+                test_var_contact = " contact works"
+                contact_item ={
+                    phone_number,
+                    emails
+                }
+                firstSpider.boom.append(contact_item)
+        except:
+            print("unlucky")
+        try:
+            tt3 = response.meta['facebook']
+            if tt3:
+                # print("contact key")
+                test_var_facebook = "facebook works"
+                firstSpider.boom.append(test_var_facebook)
+        except:
+            print("unlucky")
 
-        #print("t1",link,"t2",facebook_link)
-        emails = re.findall(r'[\w\.-]+@[\w\.-]+', response.text)
-        phone_number = re.findall(r'((?:\+\d{2}[-\.\s]??|\d{4}[-\.\s]??)?(?:\d{3}[-\.\s]??\d{3}[-\.\s]??\d{4}|\(\d{3}\)\s*\d{3}[-\.\s]??\d{4}|\d{3}[-\.\s]??\d{4}))', response.text)
-        set_phone_number = set(phone_number)
-        phone_number=list(set_phone_number)
+            #test_var_contact="modification contact"
+        meta_twitter = {'contact_key': test_var_contact, 'twitter_key': test_var,'facebook_key':test_var_facebook}
 
 
-
-
-
-
+        #firstSpider.boom.append({test_var_contact,test_var,test_var_facebook})
+        print(firstSpider.boom)
+        #print("meta",meta_twitter)
+        #print(meta_twitter)
+        yield scrapy.Request(url='http://smithgill.com/', callback=self.parse,
+                             meta=meta_twitter)
         # for item in phone_number:
         #     try:
         #         if len(str(item)) == 11 and item[0]=="1":

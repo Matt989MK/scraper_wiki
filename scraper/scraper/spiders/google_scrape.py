@@ -5,12 +5,15 @@ import pandas as pd
 import csv
 import traceback
 import re
+import sys
 class firstSpider(scrapy.Spider):
     name = 'companies'
     start_urls = ['https://en.wikipedia.org/wiki/List_of_companies_in_the_Chicago_metropolitan_area']
 
     def __init__(self):
         self.big_chunky_list = []
+        self._i = 0
+        self.s_counter = 0
     counter = 0
     counter_x=0
     def parse(self, response):
@@ -34,6 +37,8 @@ class firstSpider(scrapy.Spider):
             page_link = response.css('span[class=url] a::attr(href)').get()
             link = response.urljoin(page_link)
             meta = {"link": link, "max_retry_times": 1, "download_timeout": 20}
+            print(link,firstSpider.counter_x)
+            firstSpider.counter_x+=1
             yield scrapy.Request(url=link, callback=self.parse_business, meta=meta,
                                  errback=(lambda e: print("errback:", e)))
         except Exception as e:
@@ -61,33 +66,56 @@ class firstSpider(scrapy.Spider):
             try:
                 if "facebook" in href:
                     facebook_link=href
+                    #check ads + recent posts engagement ratio + posts on ads engagement ratio
                 if "instagram" in href:
+                    #check ads + recent posts engagement ratio + posts on ads engagement ratio
+
                     instagram_link=href
                 if "twitter" in href:
+                    #idk what yet
                     twitter_link=href
                 if "contact" in href:
+                    #phone email
                     contact_link=href
-                    yield scrapy.Request(url=contact_link, callback=self.parse_website)
+                    #yield scrapy.Request(url=contact_link, callback=self.parse_website)
 
             except Exception as e:
                 print(traceback.format_exc())
 
 
         #
-
-            emails = re.findall(r'[\w\.-]+@[\w\.-]+', response.text)
-            phone_number = re.findall(
-                r'((?:\+\d{2}[-\.\s]??|\d{4}[-\.\s]??)?(?:\d{3}[-\.\s]??\d{3}[-\.\s]??\d{4}|\(\d{3}\)\s*\d{3}[-\.\s]??\d{4}|\d{3}[-\.\s]??\d{4}))',
-                response.text)
-        self.add_business(self.big_chunky_list,
-                          urllib.parse.unquote(link, encoding='utf-8', errors='replace'), facebook_link, instagram_link,
-                          twitter_link, contact_link,emails,phone_number)
-        #print(self.big_chunky_list)
         try:
-            #print("link ", link, "facebook",facebook_link," twitter ", twitter_link, " contact ", contact_link, "email")
-            yield scrapy.Request(url=link, callback=self.parse_website, meta={'link':link,'facebook': facebook_link,'instagram':instagram_link,'twitter':twitter_link,'contact':contact_link})
+            print("link ", link, "facebook", facebook_link, " twitter ", twitter_link, " contact ", contact_link,
+                  "email")
+            self._i += 1
+            print(self._i, '/', self.i)
+            self.add_business(self.big_chunky_list,
+                              urllib.parse.unquote(link, encoding='utf-8', errors='replace'), facebook_link,
+                              instagram_link,
+                              twitter_link, contact_link, emails, phone_number)
+            self.s_counter += 1
+
+            if self.s_counter >= 20 or self._i == self.i:
+                self.s_counter = 0
+                self.dump_to_file()
+                #sys.exit('listofitems not long enough')
+                print('saved chunk')
+
         except Exception as e:
-            print(e)
+            print(traceback.format_exc())
+            #emails = re.findall(r'[\w\.-]+@[\w\.-]+', response.text)
+            #phone_number = re.findall(
+             #   r'((?:\+\d{2}[-\.\s]??|\d{4}[-\.\s]??)?(?:\d{3}[-\.\s]??\d{3}[-\.\s]??\d{4}|\(\d{3}\)\s*\d{3}[-\.\s]??\d{4}|\d{3}[-\.\s]??\d{4}))',
+             #   response.text)
+       # self.add_business(self.big_chunky_list,
+      #                    urllib.parse.unquote(link, encoding='utf-8', errors='replace'), facebook_link, instagram_link,
+       #                   twitter_link, contact_link,emails,phone_number)
+        #print(self.big_chunky_list)
+        # try:
+        #     #print("link ", link, "facebook",facebook_link," twitter ", twitter_link, " contact ", contact_link, "email")
+        #     yield scrapy.Request(url=link, callback=self.parse_website, meta={'link':link,'facebook': facebook_link,'instagram':instagram_link,'twitter':twitter_link,'contact':contact_link})
+        # except Exception as e:
+        #     print(e)
 
     def parse_website(self,response):
         firstSpider.counter_x+=1
