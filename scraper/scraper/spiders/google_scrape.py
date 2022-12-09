@@ -9,7 +9,8 @@ import sys
 class firstSpider(scrapy.Spider):
     name = 'companies'
     start_urls = ['https://en.wikipedia.org/wiki/List_of_companies_in_the_Chicago_metropolitan_area']
-
+    list_vars = []
+    boom = []
     def __init__(self):
         self.big_chunky_list = []
         self._i = 0
@@ -56,9 +57,10 @@ class firstSpider(scrapy.Spider):
         instagram_link=""
         contact_link=""
         emails =""
-        phone_number=""
+        phones=""
         link=response.meta.get("link").replace("http://","https://")
         firstSpider.counter+=1
+        #firstSpider.boom=[]
         #print("parse business link: ",link)
         print("parse business", link, firstSpider.counter)
 
@@ -74,10 +76,19 @@ class firstSpider(scrapy.Spider):
                 if "twitter" in href:
                     #idk what yet
                     twitter_link=href
-                if "contact" in href:
-                    #phone email
-                    contact_link=href
-                    #yield scrapy.Request(url=contact_link, callback=self.parse_website)
+                try:
+                    if "contact" in href:
+                        contact_link = href
+                        # print("contact link", contact_link)
+                        yield scrapy.Request(url=contact_link, callback=self.parse_website,
+                                             meta={'contact': contact_link,'link':link})
+                        #test1 = response.meta['contact_key']
+                        phones =response.meta['phones']
+                        emails=response.meta['emails']
+                        print("contact test_phones", phones,"emails",emails)
+                        print(firstSpider.boom)
+                except Exception as e:
+                    print("error with yield is:",e)
 
             except Exception as e:
                 print(traceback.format_exc())
@@ -92,14 +103,14 @@ class firstSpider(scrapy.Spider):
             self.add_business(self.big_chunky_list,
                               urllib.parse.unquote(link, encoding='utf-8', errors='replace'), facebook_link,
                               instagram_link,
-                              twitter_link, contact_link, emails, phone_number)
-            self.s_counter += 1
-
-            if self.s_counter >= 20 or self._i == self.i:
-                self.s_counter = 0
-                self.dump_to_file()
-                #sys.exit('listofitems not long enough')
-                print('saved chunk')
+                              twitter_link, contact_link, emails, phones)
+            # self.s_counter += 1
+            #
+            # if self.s_counter >= 20 or self._i == self.i:
+            #     self.s_counter = 0
+            #     self.dump_to_file()
+            #     #sys.exit('listofitems not long enough')
+            #     print('saved chunk')
 
         except Exception as e:
             print(traceback.format_exc())
@@ -121,32 +132,45 @@ class firstSpider(scrapy.Spider):
         firstSpider.counter_x+=1
         link=response.meta['link']
         print("parse website", link, firstSpider.counter_x)
-        facebook_link=response.meta['facebook']
-        instagram_link=response.meta['instagram']
-        twitter_link=response.meta['twitter']
-        contact_link=response.meta['contact']
+        #facebook_link=response.meta['facebook']
+        #instagram_link=response.meta['instagram']
+        #twitter_link=response.meta['twitter']
+        #contact_link=response.meta['contact']
+        test_var_contact = "contact Doesnt work"
+        try:
+            tt2 = response.meta['contact']
+            if tt2:
+
+                print("contact key")
+                emails = re.findall(r'[\w\.-]+@[\w\.-]+', response.text)
+                set_emails = set(emails)
+                emails=list(set_emails)
+                phone_number = re.findall(r'((?:\+\d{2}[-\.\s]??|\d{4}[-\.\s]??)?(?:\d{3}[-\.\s]??\d{3}[-\.\s]??\d{4}|\(\d{3}\)\s*\d{3}[-\.\s]??\d{4}|\d{3}[-\.\s]??\d{4}))', response.text)
+
+                for item in list(emails):
+                    if ".com" not in item:
+                        emails.remove((item))
+
+                for item in list(phone_number):
+                    print("this is attempt for phone",item)
+                    try:
+                        if len(str(item)) != 11 or item[0]!="1":
+                            print("attempt succesful")
+                            phone_number.remove(item)
+                    except:
+                        print("cant remove item")
+                set_phone_number = set(phone_number)
+                phone_number=list(set_phone_number)
+
+                meta_contact = {'phones': phone_number, 'emails': emails}
+                yield scrapy.Request(url=link, callback=self.parse,
+                                     meta={'phones': phone_number, 'emails': emails})
+                print("first spider test",firstSpider.boom,"meta_contact",meta_contact)
+        except:
+            print("unlucky")
 
 
-        print("contact page welcome")
-        emails = re.findall(r'[\w\.-]+@[\w\.-]+', response.text)
-        phone_number = re.findall(
-            r'((?:\+\d{2}[-\.\s]??|\d{4}[-\.\s]??)?(?:\d{3}[-\.\s]??\d{3}[-\.\s]??\d{4}|\(\d{3}\)\s*\d{3}[-\.\s]??\d{4}|\d{3}[-\.\s]??\d{4}))',
-            response.text)
 
-        set_phone_number = set(phone_number)
-        phone_number = list(set_phone_number)
-
-        for item in phone_number:
-            try:
-                # print(len(str(item)))
-                if len(str(item)) != 11 or item[0] != "1":
-                    print(" phone number ", item, len(str(item)))
-                    phone_number.remove(item)
-            except:
-                print("no phone number")
-        item=[]
-        item.append(emails,phone_number)
-        return item
 
         #print("email",emails,"phone",phone_number)
         # self.add_business(self.big_chunky_list,

@@ -1,14 +1,11 @@
 import scrapy
 from urllib.parse import urlencode
-from facebook_scraper import get_posts
 
-#API = '18fa7b1832038d45d7c56aa19587272a'
-API = 'e5d9f2d2-58ea-4e33-8f6e-ef9fbb67908d'
+API = ''
 
 def get_url(url):
     payload = {'api_key': API, 'proxy': 'datacenter', 'timeout': '20000', 'url': url}
     proxy_url = 'https://api.webscraping.ai/html?' + urlencode(payload)
-    #print(proxy_url)
     return proxy_url
 
 
@@ -21,15 +18,16 @@ class facebook_page(scrapy.Spider):
         url = 'https://www.facebook.com/smithgillarch/'
         print("new url", get_url(url))
         print('normal url', url)
-        yield scrapy.Request(get_url(url), callback=self.parse, meta={'pos': 0})
+        yield scrapy.Request(url, callback=self.parse, meta={'pos': 0})
 
 
 
     def parse(self, response):
         print("parse live2")
         #print(get_posts('smithgillarch', pages=10))
-        posts = response.css('.g4tp4svg.mfclru0v.om3e55n1.p8bdhjjv')
+        posts = response.css('.g4tp4svg.mfclru0v.om3e55n1.p8bdhjjv') #x1heor9g.x1qlqyl8.x1pd3egz.x1a2a7pz.x1gslohp.x1yc453h
         print(posts)
+        #response.css('.x1heor9g.x1qlqyl8.x1pd3egz.x1a2a7pz.x1gslohp.x1yc453h')
         for post in posts:
             facebook_post_like = post.css('.g4tp4svg.mfclru0v.om3e55n1.p8bdhjjv span.nnzkd6d7::text').get()
             com_share = post.css('.dkzmklf5 span::text').get()
